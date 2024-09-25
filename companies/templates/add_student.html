@@ -28,7 +28,7 @@
                     <tr>
                         <td>{{ student.name }}</td>
                         <td>{{ student.age }}</td>
-                        <td>
+                        <td style="display: flex; align-items: center;">
                             <a href="{% url 'edit_student' company.id student.id %}">Edit</a>
                             <form action="{% url 'delete_student' company.id student.id %}" method="POST"
                                 style="display:inline;">
