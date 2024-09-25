@@ -10,12 +10,12 @@
 </head>
 
 <body>
-    <h1>Update Company</h1>
+    <h1>Update Company Name</h1>
 
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Update Company</button>
+        <button type="submit">Update</button>
     </form>
 
     <a href="{% url 'company_list' %}">Back to Company List</a>
