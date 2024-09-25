@@ -90,9 +90,9 @@ def add_student(request, company_id):
         form = StudentForm(request.POST)
         if form.is_valid():
             student = form.save(commit=False)
-            student.company = company  # Associate the student with the company
+            student.company = company
             student.save()
-            return redirect('company_list')  # Redirect to the company list after saving
+            return redirect('company_list')
     else:
         form = StudentForm()
 
