@@ -9,9 +9,9 @@ class Company(models.Model):
     
 
 class Student(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
     age = models.IntegerField()
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='students')
 
     def __str__(self):
         return f"{self.name} ({self.age})"

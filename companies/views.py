@@ -40,10 +40,27 @@ def company_list(request):
 
 
 def create_database(company_name):
-    sanitized_company_name = company_name.replace(" ", "_").lower()
-    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
-    conn = sqlite3.connect(db_file_path)
-    conn.close()
+    # Replace spaces with underscores, leave everything else unchanged
+    formatted_company_name = company_name.replace(" ", "_")
+    if formatted_company_name:  # Ensure the name is not empty
+        db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_company_name}.db')
+        conn = sqlite3.connect(db_file_path)
+        cursor = conn.cursor()
+
+        # Create the students table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                age INTEGER NOT NULL
+            )
+        ''')
+
+        # Commit and close the connection
+        conn.commit()
+        conn.close()
+    else:
+        print("Invalid company name provided.")
 
 
 def update_company(request, company_id):
@@ -57,8 +74,7 @@ def update_company(request, company_id):
             new_name = company.name
 
             if old_name != new_name:
-                delete_database(old_name)
-                create_database(new_name)
+                rename_database(old_name, new_name)
 
             return redirect('company_list')
         else:
@@ -67,6 +83,24 @@ def update_company(request, company_id):
         form = CompanyForm(instance=company)
 
     return render(request, 'update_company.html', {'form': form, 'company': company})
+
+
+def rename_database(old_name, new_name):
+    # Replace spaces with underscores, leave everything else unchanged
+    formatted_old_name = old_name.replace(" ", "_")
+    formatted_new_name = new_name.replace(" ", "_")
+
+    if formatted_old_name and formatted_new_name:
+        old_db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_old_name}.db')
+        new_db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_new_name}.db')
+
+        if os.path.exists(old_db_file_path):
+            os.rename(old_db_file_path, new_db_file_path)
+        else:
+            print(f"Database file {old_db_file_path} not found. Creating a new one.")
+            create_database(new_name)
+    else:
+        print("Invalid company name. Cannot rename database.")
 
 
 def delete_database(company_name):
@@ -85,38 +119,135 @@ def delete_company(request, company_id):
 
 def add_student(request, company_id):
     company = get_object_or_404(Company, id=company_id)
-    students = Student.objects.filter(company=company)
+    existing_students = fetch_students_from_company_db(company.name)
 
     if request.method == 'POST':
         form = StudentForm(request.POST)
         if form.is_valid():
+            # Create a student instance without saving to DB
             student = form.save(commit=False)
-            student.company = company
-            student.save()
-            return redirect('company_list')
-    else:
-        form = StudentForm()
+            student.company = company  # Associate with the company
 
-    return render(request, 'add_student.html', {'form': form, 'company': company, 'students': students})
+            # Store student information directly in the company's database
+            store_student_in_company_db(company.name, student)
+
+            # Redirect to the same add_student view to show updated student list
+            return redirect('add_student', company_id=company.id)
+    else:
+        form = StudentForm()  # Initialize a blank form for GET request
+
+    # Render the template with the form, company details, and existing students
+    return render(request, 'add_student.html', {'form': form, 'company': company, 'students': existing_students })
+
+
+def fetch_students_from_company_db(company_name):
+    sanitized_company_name = company_name.replace(" ", "_").lower()
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+    # Connect to the company's database
+    conn = sqlite3.connect(db_file_path)
+    cursor = conn.cursor()
+
+    # Fetch all students from the database, including their IDs
+    cursor.execute('SELECT id, name, age FROM students')
+    student_records = cursor.fetchall()
+
+    # Close the connection
+    conn.close()
+
+    # Convert the records into a list of dictionaries or Student instances
+    students = [Student(id=id, name=name, age=age) for id, name, age in student_records]
+    
+    return students
+
+
+def store_student_in_company_db(company_name, student):
+    # Sanitize the company name for the database file name
+    sanitized_company_name = company_name.replace(" ", "_").lower()
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+    # Connect to the company's database
+    conn = sqlite3.connect(db_file_path)
+    cursor = conn.cursor()
+    
+    # Insert the student data into the students table
+    cursor.execute('''
+        INSERT INTO students (name, age)
+        VALUES (?, ?)
+    ''', (student.name, student.age))
+
+    # Commit and close the connection
+    conn.commit()
+    conn.close()
 
 
 def update_student(request, student_id):
-    student = get_object_or_404(Student, id=student_id)
+    # Fetch the student from the SQLite database
+    student = fetch_student_from_company_db(student_id)
 
     if request.method == 'POST':
         form = StudentForm(request.POST, instance=student)
         if form.is_valid():
-            form.save()
+            # Update the student in the SQLite database
+            update_student_in_company_db(student.id, form.cleaned_data['name'], form.cleaned_data['age'])
             return redirect('company_list')
     else:
-        form = StudentForm(instance=student)
+        form = StudentForm(initial={'name': student.name, 'age': student.age})
 
-    return render(request, 'update_student.html', {'form': form,'student': student})
-
+    return render(request, 'update_student.html', {'form': form, 'student': student})
 
 def delete_student(request, student_id):
-    student = get_object_or_404(Student, id=student_id)
+    # Fetch the student from the SQLite database
+    student = fetch_student_from_company_db(student_id)
+    
     if request.method == 'POST':
-        student.delete()
+        # Delete the student from the SQLite database
+        delete_student_from_company_db(student_id)
         return redirect('company_list')
+    
     return redirect('company_list')
+
+def fetch_student_from_company_db(student_id):
+    # Fetch the company name based on the student_id
+    # Assuming you have a way to get the company's name from student
+    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+    conn = sqlite3.connect(db_file_path)
+    cursor = conn.cursor()
+
+    # Fetch the student by ID
+    cursor.execute('SELECT id, name, age FROM students WHERE id = ?', (student_id,))
+    student_record = cursor.fetchone()
+    conn.close()
+
+    if student_record:
+        return Student(id=student_record[0], name=student_record[1], age=student_record[2])
+    else:
+        raise Http404("Student not found.")
+
+def update_student_in_company_db(student_id, name, age):
+    # Assuming you have a way to determine the company name
+    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+    conn = sqlite3.connect(db_file_path)
+    cursor = conn.cursor()
+
+    # Update the student in the database
+    cursor.execute('UPDATE students SET name = ?, age = ? WHERE id = ?', (name, age, student_id))
+    conn.commit()
+    conn.close()
+
+def delete_student_from_company_db(student_id):
+    # Assuming you have a way to determine the company name
+    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+    conn = sqlite3.connect(db_file_path)
+    cursor = conn.cursor()
+
+    # Delete the student from the database
+    cursor.execute('DELETE FROM students WHERE id = ?', (student_id,))
+    conn.commit()
+    conn.close()
