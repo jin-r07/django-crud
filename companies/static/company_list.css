@@ -8,30 +8,26 @@ h2 {
     margin-top: 30px;
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-li {
-    background: #fff;
-    margin: 5px 0;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    transition: background 0.3s;
-}
-
-li:hover {
-    background: #e9e9e9;
-}
-
-form {
+table {
+    width: 100%;
+    border-collapse: collapse;
     margin-top: 20px;
-    padding: 15px;
-    background: #fff;
+}
+
+th,
+td {
     border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
 }
 
 button {
@@ -48,39 +44,23 @@ button:hover {
     background-color: #218838;
 }
 
+
+form {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.addCompanyForm {
+    border: 1px solid #ddd;
+}
+
+.deleteBtn {
+    margin-left: 40px;
+}
+
 .error {
     color: red;
     margin-top: 10px;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 60%;
-    display: flex;
-}
-
-.modal-content .left,
-.modal-content .right {
-    width: 50%;
-    padding: 10px;
-}
-
-.modal-content .right form input {
-    display: block;
-    margin-bottom: 10px;
 }

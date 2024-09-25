@@ -10,9 +10,9 @@
 </head>
 
 <body>
-    <h1>Update Company Name</h1>
+    <h1>Update Company</h1>
 
-    <form method="POST">
+    <form method="POST" class="addCompanyForm" style="margin-bottom: 30px;">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Update</button>
