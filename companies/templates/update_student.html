@@ -6,19 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% load static %}
     <link rel="stylesheet" href="{% static 'edit_student.css' %}">
-    <title>Edit Student - {{ student.name }}</title>
+    <title>Edit Student in {{ company.name }}</title>
 </head>
 
 <body>
-    <h1>Update Student - {{ student.name }}</h1>
+    <h1>Edit Student in {{ company.name }}</h1>
 
-    <div >
+    <div class="container">
         <form method="POST">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Update Student</button>
+            <button type="submit">Save Changes</button>
         </form>
-        <a href="{% url 'company_list' %}">Back to Company List</a>
+        <a href="{% url 'add_student' company.id %}">Back to Student List</a>
     </div>
 </body>
 

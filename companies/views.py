@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login
 from .models import Company, Student
 from .forms import CompanyForm, StudentForm
 from django.conf import settings
+from django.http import Http404
 
 
 def login_view(request):
@@ -181,37 +182,33 @@ def store_student_in_company_db(company_name, student):
     conn.close()
 
 
-def update_student(request, student_id):
-    # Fetch the student from the SQLite database
-    student = fetch_student_from_company_db(student_id)
+def update_student(request, company_id, student_id):
+    company = get_object_or_404(Company, id=company_id)
+    student = fetch_student_from_company_db(company.name, student_id)  # Fetch student for the specific company
 
     if request.method == 'POST':
         form = StudentForm(request.POST, instance=student)
         if form.is_valid():
-            # Update the student in the SQLite database
-            update_student_in_company_db(student.id, form.cleaned_data['name'], form.cleaned_data['age'])
-            return redirect('company_list')
+            update_student_in_company_db(student_id, form.cleaned_data['name'], form.cleaned_data['age'], company.name)
+            return redirect('add_student', company_id=company.id)
     else:
         form = StudentForm(initial={'name': student.name, 'age': student.age})
 
-    return render(request, 'update_student.html', {'form': form, 'student': student})
+    return render(request, 'update_student.html', {'form': form, 'company': company, 'student': student})
 
-def delete_student(request, student_id):
-    # Fetch the student from the SQLite database
-    student = fetch_student_from_company_db(student_id)
-    
+
+def delete_student(request, company_id, student_id):
+    company = get_object_or_404(Company, id=company_id)
     if request.method == 'POST':
-        # Delete the student from the SQLite database
-        delete_student_from_company_db(student_id)
-        return redirect('company_list')
-    
-    return redirect('company_list')
+        delete_student_from_company_db(company.name, student_id)
+        return redirect('add_student', company_id=company.id)
 
-def fetch_student_from_company_db(student_id):
-    # Fetch the company name based on the student_id
-    # Assuming you have a way to get the company's name from student
-    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
-    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+    return redirect('add_student', company_id=company.id)
+
+
+def fetch_student_from_company_db(company_name, student_id):
+    formatted_company_name = company_name.replace(" ", "_")  # Keep consistent naming
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_company_name}.db')
 
     conn = sqlite3.connect(db_file_path)
     cursor = conn.cursor()
@@ -226,10 +223,10 @@ def fetch_student_from_company_db(student_id):
     else:
         raise Http404("Student not found.")
 
-def update_student_in_company_db(student_id, name, age):
-    # Assuming you have a way to determine the company name
-    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
-    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+def update_student_in_company_db(student_id, name, age, company_name):
+    formatted_company_name = company_name.replace(" ", "_")
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_company_name}.db')
 
     conn = sqlite3.connect(db_file_path)
     cursor = conn.cursor()
@@ -239,10 +236,10 @@ def update_student_in_company_db(student_id, name, age):
     conn.commit()
     conn.close()
 
-def delete_student_from_company_db(student_id):
-    # Assuming you have a way to determine the company name
-    sanitized_company_name = "your_company_name"  # Replace with actual logic to fetch company name
-    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{sanitized_company_name}.db')
+
+def delete_student_from_company_db(company_name, student_id):
+    formatted_company_name = company_name.replace(" ", "_")
+    db_file_path = os.path.join(settings.MEDIA_ROOT, f'{formatted_company_name}.db')
 
     conn = sqlite3.connect(db_file_path)
     cursor = conn.cursor()
