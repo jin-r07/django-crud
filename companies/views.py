@@ -2,7 +2,7 @@ import os
 import sqlite3
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
-from .models import Company
+from .models import Company, Student
 from .forms import CompanyForm, StudentForm
 from django.conf import settings
 
@@ -85,6 +85,7 @@ def delete_company(request, company_id):
 
 def add_student(request, company_id):
     company = get_object_or_404(Company, id=company_id)
+    students = Student.objects.filter(company=company)
 
     if request.method == 'POST':
         form = StudentForm(request.POST)
@@ -96,4 +97,26 @@ def add_student(request, company_id):
     else:
         form = StudentForm()
 
-    return render(request, 'add_student.html', {'form': form, 'company': company})
+    return render(request, 'add_student.html', {'form': form, 'company': company, 'students': students})
+
+
+def update_student(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            return redirect('company_list')
+    else:
+        form = StudentForm(instance=student)
+
+    return render(request, 'update_student.html', {'form': form,'student': student})
+
+
+def delete_student(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    if request.method == 'POST':
+        student.delete()
+        return redirect('company_list')
+    return redirect('company_list')
