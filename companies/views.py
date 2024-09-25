@@ -3,7 +3,7 @@ import sqlite3
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from .models import Company
-from .forms import CompanyForm
+from .forms import CompanyForm, StudentForm
 from django.conf import settings
 
 
@@ -81,3 +81,19 @@ def delete_company(request, company_id):
     delete_database(company.name)
     company.delete()
     return redirect('company_list')
+
+
+def add_student(request, company_id):
+    company = get_object_or_404(Company, id=company_id)
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            student = form.save(commit=False)
+            student.company = company  # Associate the student with the company
+            student.save()
+            return redirect('company_list')  # Redirect to the company list after saving
+    else:
+        form = StudentForm()
+
+    return render(request, 'add_student.html', {'form': form, 'company': company})
