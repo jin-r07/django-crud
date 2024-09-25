@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'company_list.css' %}">
+    <title>Company List</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+    <h1>Company List</h1>
+
+    {% if error %}
+    <div style="color:red;">{{ error }}</div>
+    {% endif %}
+
+    <!-- Check if companies exist -->
+    {% if companies %}
+        <ul>
+            {% for company in companies %}
+            <li>
+                <a href="#" class="company-link" data-company-id="{{ company.id }}">{{ company.name }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No companies found. Please add a new company below.</p>
+    {% endif %}
+
+    <h2>Add New Company</h2>
+
+    <!-- Form to Add New Company -->
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Add Company</button>
+    </form>
+
+    <!-- Modal for displaying company students and adding new student -->
+    <div id="company-modal" class="modal">
+        <div class="modal-content">
+            <div class="left">
+                <h3>Existing Students</h3>
+                <ul id="student-list">
+                    <!-- Existing students will be loaded here via AJAX -->
+                </ul>
+            </div>
+            <div class="right">
+                <h3>Add New Student</h3>
+                <form id="student-form">
+                    {% csrf_token %}
+                    <input type="hidden" id="company-id" name="company_id">
+                    <input type="text" id="student-name" name="name" placeholder="Student Name" required>
+                    <input type="number" id="student-age" name="age" placeholder="Student Age" required>
+                    <button type="submit">Add Student</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // When a company is clicked, open the modal and load student data
+            $('.company-link').click(function(e) {
+                e.preventDefault();
+                var companyId = $(this).data('company-id');
+                $('#company-id').val(companyId);
+
+                // Load existing students from the selected company's database via AJAX
+                $.ajax({
+                    url: '/get_students/',  // You need to create this view and URL
+                    method: 'GET',
+                    data: { 'company_id': companyId },
+                    success: function(response) {
+                        $('#student-list').empty();
+                        if (response.students.length > 0) {
+                            response.students.forEach(function(student) {
+                                $('#student-list').append('<li>' + student.name + ', Age: ' + student.age + '</li>');
+                            });
+                        } else {
+                            $('#student-list').append('<li>No students found</li>');
+                        }
+                        $('#company-modal').fadeIn();
+                    }
+                });
+            });
+
+            // Close modal when clicking outside the content
+            $(window).click(function(event) {
+                if ($(event.target).is('#company-modal')) {
+                    $('#company-modal').fadeOut();
+                }
+            });
+
+            // Handle student form submission
+            $('#student-form').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+                
+                $.ajax({
+                    url: '/add_student/',  // You need to create this view and URL
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Student added successfully');
+                            $('#company-modal').fadeOut();
+                        } else {
+                            alert('Error adding student');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
